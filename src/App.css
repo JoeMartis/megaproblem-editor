@@ -1,0 +1,456 @@
+/* Global Reset and Variables */
+:root {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d2d;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #6e6e6e;
+  --border-color: #3c3c3c;
+  --accent-blue: #007acc;
+  --accent-green: #4caf50;
+  --accent-red: #f44336;
+  --accent-orange: #ff9800;
+  --edx-bg: #ffffff;
+  --edx-text: #333333;
+  --edx-blue: #00688d;
+  --edx-green: #008200;
+  --edx-border: #e0e0e0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* App Layout */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toolbar-left {
+  flex: 1;
+}
+
+.toolbar-center {
+  flex: 0 0 auto;
+}
+
+.toolbar-right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.question-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.validation-summary {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.error-count {
+  color: var(--accent-red);
+}
+
+.warning-count {
+  color: var(--accent-orange);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  cursor: pointer;
+}
+
+.btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--accent-blue);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0088e0;
+}
+
+.btn-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: #3d3d3d;
+}
+
+/* Editor Container */
+.editor-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Panels */
+.editor-panel,
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Resize Handle */
+.resize-handle {
+  width: 4px;
+  background-color: var(--border-color);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.resize-handle:hover {
+  background-color: var(--accent-blue);
+}
+
+/* CodeMirror Wrapper */
+.codemirror-wrapper {
+  flex: 1;
+  overflow: auto;
+}
+
+.codemirror-wrapper .cm-editor {
+  height: 100%;
+}
+
+.codemirror-wrapper .cm-scroller {
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Preview Panel */
+.preview-content {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--edx-bg);
+  color: var(--edx-text);
+}
+
+/* Parse Error */
+.parse-error {
+  padding: 20px;
+  background-color: #fff3f3;
+  color: var(--accent-red);
+}
+
+.parse-error h3 {
+  margin-bottom: 10px;
+}
+
+.parse-error pre {
+  background-color: #ffebee;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+/* No Content */
+.no-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Validation Errors */
+.validation-errors {
+  padding: 12px 20px;
+  background-color: #fff8e1;
+  border-bottom: 1px solid #ffe082;
+}
+
+.validation-item {
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.validation-item.error {
+  color: var(--accent-red);
+}
+
+.validation-item.warning {
+  color: #e65100;
+}
+
+/* Problem Preview - edX Style */
+.problem-preview {
+  padding: 24px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+}
+
+.problem-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--edx-blue);
+}
+
+.problem-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--edx-text);
+  margin-bottom: 8px;
+}
+
+.max-attempts {
+  font-size: 13px;
+  color: #666;
+}
+
+.problem-intro {
+  margin-bottom: 24px;
+  font-size: 15px;
+  color: var(--edx-text);
+}
+
+.problem-intro p {
+  margin-bottom: 12px;
+}
+
+/* Question Block */
+.question-block {
+  margin-bottom: 32px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid var(--edx-border);
+  border-radius: 4px;
+}
+
+.question-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--edx-text);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* Choices */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background-color: white;
+  border: 1px solid var(--edx-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.choice:hover {
+  border-color: var(--edx-blue);
+  background-color: #f0f7fa;
+}
+
+.choice.selected {
+  border-color: var(--edx-blue);
+  background-color: #e3f2fd;
+}
+
+.choice.correct {
+  border-color: var(--edx-green);
+  background-color: #e8f5e9;
+}
+
+.choice input[type="radio"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.choice-text {
+  font-size: 14px;
+  color: var(--edx-text);
+  flex: 1;
+}
+
+.correct-indicator {
+  color: var(--edx-green);
+  font-weight: bold;
+}
+
+/* Solution */
+.solution {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+}
+
+.solution-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--edx-green);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.solution-content {
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.solution-content p {
+  margin-bottom: 8px;
+}
+
+.solution-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Numerical and String Inputs */
+.numerical-input,
+.string-input {
+  width: 200px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--edx-border);
+  border-radius: 4px;
+}
+
+.numerical-input:focus,
+.string-input:focus {
+  outline: none;
+  border-color: var(--edx-blue);
+  box-shadow: 0 0 0 2px rgba(0, 104, 141, 0.1);
+}
+
+/* HTML Block */
+.html-block {
+  margin: 20px 0;
+  font-size: 15px;
+}
+
+.html-block p {
+  margin-bottom: 12px;
+}
+
+/* MathJax placeholder styling */
+.problem-preview .MathJax,
+.problem-preview mjx-container {
+  font-size: inherit;
+}
+
+/* LaTeX-style math display */
+.problem-preview p {
+  margin-bottom: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .toolbar-left,
+  .toolbar-center,
+  .toolbar-right {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .problem-preview {
+    padding: 16px;
+  }
+}
