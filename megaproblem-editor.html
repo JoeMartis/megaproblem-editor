@@ -28,11 +28,7 @@
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
@@ -63,7 +59,7 @@
       flex-wrap: wrap;
     }
 
-    .toolbar-left, .toolbar-right {
+    .toolbar-left, .toolbar-center, .toolbar-right {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -83,22 +79,30 @@
       border-radius: 4px;
     }
 
-    .validation-summary {
+    .mode-toggle {
       display: flex;
-      gap: 12px;
-      font-size: 13px;
+      background: #2d2d2d;
+      border-radius: 4px;
+      overflow: hidden;
     }
 
-    .error-count { color: #f44336; }
-    .warning-count { color: #ff9800; }
-
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .mode-btn {
+      padding: 6px 12px;
       font-size: 13px;
+      border: none;
+      background: transparent;
       color: #a0a0a0;
       cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      background: #007acc;
+      color: white;
+    }
+
+    .mode-btn:hover:not(.active) {
+      background: #3d3d3d;
     }
 
     .btn {
@@ -126,6 +130,25 @@
 
     .btn-secondary:hover { background-color: #3d3d3d; }
 
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .btn-success:hover { background-color: #218838; }
+
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .btn-danger:hover { background-color: #c82333; }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
     /* Editor Container */
     .editor-container {
       display: flex;
@@ -142,6 +165,7 @@
     .panel-header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       padding: 8px 12px;
       background-color: #2d2d2d;
       border-bottom: 1px solid #3c3c3c;
@@ -200,20 +224,6 @@
       white-space: pre-wrap;
     }
 
-    .validation-errors {
-      padding: 12px 20px;
-      background-color: #fff8e1;
-      border-bottom: 1px solid #ffe082;
-    }
-
-    .validation-item {
-      font-size: 13px;
-      padding: 4px 0;
-    }
-
-    .validation-item.error { color: #f44336; }
-    .validation-item.warning { color: #e65100; }
-
     /* Problem Preview - edX Style */
     .problem-preview {
       padding: 24px 32px;
@@ -236,11 +246,6 @@
       margin-bottom: 8px;
     }
 
-    .max-attempts {
-      font-size: 13px;
-      color: #666;
-    }
-
     .problem-intro {
       margin-bottom: 24px;
       font-size: 15px;
@@ -248,7 +253,6 @@
 
     .problem-intro p { margin-bottom: 12px; }
 
-    /* Question Block */
     .question-block {
       margin-bottom: 32px;
       padding: 20px;
@@ -264,7 +268,6 @@
       line-height: 1.5;
     }
 
-    /* Choices */
     .choices {
       display: flex;
       flex-direction: column;
@@ -288,11 +291,6 @@
       background-color: #f0f7fa;
     }
 
-    .choice.selected {
-      border-color: #00688d;
-      background-color: #e3f2fd;
-    }
-
     .choice.correct {
       border-color: #008200;
       background-color: #e8f5e9;
@@ -313,7 +311,6 @@
       font-weight: bold;
     }
 
-    /* Solution */
     .solution {
       margin-top: 16px;
       padding: 16px;
@@ -328,7 +325,6 @@
       color: #008200;
       margin-bottom: 8px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .solution-content {
@@ -336,19 +332,250 @@
       color: #2e7d32;
     }
 
-    .solution-content p { margin-bottom: 8px; }
-    .solution-content p:last-child { margin-bottom: 0; }
-
-    /* HTML Block */
     .html-block {
       margin: 20px 0;
       font-size: 15px;
     }
 
-    .html-block p { margin-bottom: 12px; }
+    /* WYSIWYG Editor Styles */
+    .wysiwyg-editor {
+      flex: 1;
+      overflow: auto;
+      background-color: #ffffff;
+      color: #333333;
+      padding: 24px;
+    }
 
-    /* Hidden file input */
+    .wysiwyg-section {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+    }
+
+    .wysiwyg-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .wysiwyg-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .wysiwyg-input {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    .wysiwyg-input:focus {
+      outline: none;
+      border-color: #007acc;
+      box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+    }
+
+    .wysiwyg-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .wysiwyg-textarea:focus {
+      outline: none;
+      border-color: #007acc;
+      box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+    }
+
+    .wysiwyg-question {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .wysiwyg-question-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .wysiwyg-question-number {
+      font-weight: 600;
+      color: #00688d;
+    }
+
+    .wysiwyg-question-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .wysiwyg-question-body {
+      padding: 16px;
+    }
+
+    .wysiwyg-field {
+      margin-bottom: 16px;
+    }
+
+    .wysiwyg-field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .wysiwyg-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .wysiwyg-choice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .wysiwyg-choice.is-correct {
+      background: #e8f5e9;
+      border-color: #4caf50;
+    }
+
+    .wysiwyg-choice input[type="checkbox"] {
+      flex-shrink: 0;
+    }
+
+    .wysiwyg-choice-text {
+      flex: 1;
+      padding: 4px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .wysiwyg-choice-text:focus {
+      outline: none;
+      border-color: #007acc;
+      background: white;
+    }
+
+    .wysiwyg-choice-delete {
+      padding: 4px 8px;
+      font-size: 12px;
+      background: transparent;
+      border: none;
+      color: #dc3545;
+      cursor: pointer;
+    }
+
+    .wysiwyg-choice-delete:hover {
+      background: #ffebee;
+      border-radius: 4px;
+    }
+
+    .add-choice-btn {
+      margin-top: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      background: #e3f2fd;
+      border: 1px dashed #2196f3;
+      border-radius: 4px;
+      color: #1976d2;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .add-choice-btn:hover {
+      background: #bbdefb;
+    }
+
+    .add-question-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+      font-size: 14px;
+      background: #f0f7ff;
+      border: 2px dashed #007acc;
+      border-radius: 8px;
+      color: #007acc;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .add-question-btn:hover {
+      background: #e3f2fd;
+    }
+
     .hidden-input { display: none; }
+
+    /* Rich text toolbar */
+    .rich-text-toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .rich-text-toolbar button {
+      padding: 4px 8px;
+      font-size: 12px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .rich-text-toolbar button:hover {
+      background: #e0e0e0;
+    }
+
+    .rich-text-area {
+      min-height: 100px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 0 0 4px 4px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .rich-text-area:focus {
+      outline: none;
+      border-color: #007acc;
+    }
   </style>
 </head>
 <body>
@@ -357,14 +584,14 @@
       <div class="toolbar-left">
         <h1 class="app-title">edX Megaproblem Editor</h1>
         <span class="question-count" id="questionCount">0 questions</span>
-        <div class="validation-summary" id="validationSummary"></div>
+      </div>
+      <div class="toolbar-center">
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="visualModeBtn" onclick="switchMode('visual')">Visual</button>
+          <button class="mode-btn" id="xmlModeBtn" onclick="switchMode('xml')">XML</button>
+        </div>
       </div>
       <div class="toolbar-right">
-        <label class="checkbox-label">
-          <input type="checkbox" id="showSolutions" onchange="renderPreview()">
-          Show Solutions
-        </label>
-        <button class="btn btn-secondary" onclick="formatXml()">Format XML</button>
         <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Open File</button>
         <input type="file" id="fileInput" class="hidden-input" accept=".xml" onchange="loadFile(event)">
         <button class="btn btn-primary" onclick="downloadXml()">Download</button>
@@ -373,90 +600,557 @@
 
     <main class="editor-container">
       <div class="editor-panel" id="editorPanel" style="width: 50%;">
-        <div class="panel-header">XML Editor</div>
-        <div class="codemirror-wrapper">
+        <div class="panel-header">
+          <span id="editorPanelTitle">Visual Editor</span>
+          <button class="btn btn-sm btn-secondary" id="formatBtn" onclick="formatXml()" style="display: none;">Format</button>
+        </div>
+        <!-- XML Editor (hidden by default) -->
+        <div class="codemirror-wrapper" id="xmlEditorWrapper" style="display: none;">
           <textarea id="xmlEditor"></textarea>
         </div>
+        <!-- WYSIWYG Editor -->
+        <div class="wysiwyg-editor" id="wysiwygEditor"></div>
       </div>
 
       <div class="resize-handle" id="resizeHandle"></div>
 
       <div class="preview-panel" id="previewPanel" style="width: 50%;">
-        <div class="panel-header">Preview</div>
+        <div class="panel-header">
+          <span>Preview</span>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; text-transform: none; font-weight: normal;">
+            <input type="checkbox" id="showSolutions" onchange="renderPreview()">
+            Show Solutions
+          </label>
+        </div>
         <div class="preview-content" id="previewContent"></div>
       </div>
     </main>
   </div>
 
   <script>
-    // Sample problem XML
-    const SAMPLE_PROBLEM = `<problem display_name="Sample Problem" max_attempts="2" markdown="null">
-  <html>
-    <p>This is an example edX megaproblem. Edit the XML on the left and see the preview on the right.</p>
-  </html>
+    // Current mode and data
+    let currentMode = 'visual';
+    let editor; // CodeMirror instance
+    let problemData = {
+      displayName: 'Sample Problem',
+      maxAttempts: '2',
+      introHtml: '<p>This is an example edX megaproblem. Edit the content on the left and see the preview on the right.</p>',
+      blocks: [
+        {
+          type: 'question',
+          questionType: 'multiplechoice',
+          label: '1) What is 2 + 2?',
+          choices: [
+            { text: '3', correct: false },
+            { text: '4', correct: true },
+            { text: '5', correct: false },
+            { text: '22', correct: false }
+          ],
+          shuffle: false,
+          explanation: '2 + 2 = 4. This is basic arithmetic.'
+        },
+        {
+          type: 'question',
+          questionType: 'multiplechoice',
+          label: '2) Which planet is closest to the Sun?',
+          choices: [
+            { text: 'Venus', correct: false },
+            { text: 'Mercury', correct: true },
+            { text: 'Earth', correct: false },
+            { text: 'Mars', correct: false }
+          ],
+          shuffle: true,
+          explanation: 'Mercury is the closest planet to the Sun in our solar system.'
+        }
+      ]
+    };
 
-  <multiplechoiceresponse>
-    <label>1) What is 2 + 2?</label>
-    <choicegroup type="MultipleChoice" shuffle="false">
-      <choice correct="false">3</choice>
-      <choice correct="true">4</choice>
-      <choice correct="false">5</choice>
-      <choice correct="false">22</choice>
-    </choicegroup>
-  </multiplechoiceresponse>
-  <solution>
-    <div class="detailed-solution">
-      <p>Explanation</p>
-      <p>2 + 2 = 4. This is basic arithmetic.</p>
-    </div>
-  </solution>
-
-  <multiplechoiceresponse>
-    <label>2) Which planet is closest to the Sun?</label>
-    <choicegroup type="MultipleChoice" shuffle="true">
-      <choice correct="false">Venus</choice>
-      <choice correct="true">Mercury</choice>
-      <choice correct="false">Earth</choice>
-      <choice correct="false">Mars</choice>
-    </choicegroup>
-  </multiplechoiceresponse>
-  <solution>
-    <div class="detailed-solution">
-      <p>Explanation</p>
-      <p>Mercury is the closest planet to the Sun in our solar system.</p>
-    </div>
-  </solution>
-</problem>`;
-
-    // Initialize CodeMirror
-    let editor;
-
+    // Initialize
     document.addEventListener('DOMContentLoaded', function() {
+      // Initialize CodeMirror
       editor = CodeMirror.fromTextArea(document.getElementById('xmlEditor'), {
         mode: 'xml',
         theme: 'monokai',
         lineNumbers: true,
         lineWrapping: true,
         foldGutter: true,
-        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
-        matchTags: true,
-        autoCloseTags: true
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter']
       });
 
-      editor.setValue(SAMPLE_PROBLEM);
-      editor.on('change', debounce(renderPreview, 300));
+      editor.on('change', debounce(() => {
+        if (currentMode === 'xml') {
+          parseXmlToData();
+          renderPreview();
+        }
+      }, 300));
 
       setupResizer();
+      renderWysiwygEditor();
       renderPreview();
     });
 
-    // Debounce function
+    // Debounce
     function debounce(func, wait) {
       let timeout;
       return function(...args) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
       };
+    }
+
+    // Mode switching
+    function switchMode(mode) {
+      currentMode = mode;
+
+      document.getElementById('visualModeBtn').classList.toggle('active', mode === 'visual');
+      document.getElementById('xmlModeBtn').classList.toggle('active', mode === 'xml');
+
+      const xmlWrapper = document.getElementById('xmlEditorWrapper');
+      const wysiwygEditor = document.getElementById('wysiwygEditor');
+      const formatBtn = document.getElementById('formatBtn');
+      const panelTitle = document.getElementById('editorPanelTitle');
+
+      if (mode === 'xml') {
+        // Switch to XML mode
+        updateXmlFromData();
+        xmlWrapper.style.display = 'block';
+        wysiwygEditor.style.display = 'none';
+        formatBtn.style.display = 'block';
+        panelTitle.textContent = 'XML Editor';
+        editor.refresh();
+      } else {
+        // Switch to Visual mode
+        parseXmlToData();
+        xmlWrapper.style.display = 'none';
+        wysiwygEditor.style.display = 'block';
+        formatBtn.style.display = 'none';
+        panelTitle.textContent = 'Visual Editor';
+        renderWysiwygEditor();
+      }
+    }
+
+    // Generate XML from data
+    function dataToXml() {
+      let xml = `<problem display_name="${escapeAttr(problemData.displayName)}" max_attempts="${problemData.maxAttempts}" markdown="null">\n`;
+
+      if (problemData.introHtml) {
+        xml += `  <html>\n${problemData.introHtml.split('\n').map(l => '    ' + l).join('\n')}\n  </html>\n\n`;
+      }
+
+      problemData.blocks.forEach((block, idx) => {
+        if (block.type === 'html') {
+          xml += `  <html>\n${block.content.split('\n').map(l => '    ' + l).join('\n')}\n  </html>\n\n`;
+        } else if (block.type === 'question') {
+          if (block.questionType === 'multiplechoice') {
+            xml += `  <multiplechoiceresponse>\n`;
+            xml += `    <label>${escapeXml(block.label)}</label>\n`;
+            xml += `    <choicegroup type="MultipleChoice" shuffle="${block.shuffle}">\n`;
+            block.choices.forEach(choice => {
+              xml += `      <choice correct="${choice.correct}">${escapeXml(choice.text)}</choice>\n`;
+            });
+            xml += `    </choicegroup>\n`;
+            xml += `  </multiplechoiceresponse>\n`;
+          }
+
+          if (block.explanation) {
+            xml += `  <solution>\n`;
+            xml += `    <div class="detailed-solution">\n`;
+            xml += `      <p>Explanation</p>\n`;
+            xml += `      <p>${escapeXml(block.explanation)}</p>\n`;
+            xml += `    </div>\n`;
+            xml += `  </solution>\n`;
+          }
+          xml += '\n';
+        }
+      });
+
+      xml += '</problem>';
+      return xml;
+    }
+
+    // Update XML editor from data
+    function updateXmlFromData() {
+      const xml = dataToXml();
+      editor.setValue(xml);
+    }
+
+    // Parse XML to data
+    function parseXmlToData() {
+      try {
+        const xmlString = editor.getValue();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xmlString, 'text/xml');
+
+        if (doc.querySelector('parsererror')) return;
+
+        const problemEl = doc.querySelector('problem');
+        if (!problemEl) return;
+
+        problemData.displayName = problemEl.getAttribute('display_name') || 'Untitled';
+        problemData.maxAttempts = problemEl.getAttribute('max_attempts') || '2';
+
+        const blocks = [];
+        let introHtml = '';
+        const children = Array.from(problemEl.children);
+        let foundFirstQuestion = false;
+
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i];
+          const tagName = child.tagName.toLowerCase();
+
+          if (tagName === 'html') {
+            if (!foundFirstQuestion) {
+              introHtml = child.innerHTML.trim();
+            } else {
+              blocks.push({ type: 'html', content: child.innerHTML.trim() });
+            }
+          } else if (tagName === 'multiplechoiceresponse') {
+            foundFirstQuestion = true;
+            const label = child.querySelector('label')?.textContent?.trim() || '';
+            const choicegroup = child.querySelector('choicegroup');
+            const shuffle = choicegroup?.getAttribute('shuffle') === 'true';
+
+            const choices = [];
+            child.querySelectorAll('choice').forEach(choiceEl => {
+              choices.push({
+                text: choiceEl.textContent?.trim() || '',
+                correct: choiceEl.getAttribute('correct') === 'true'
+              });
+            });
+
+            let explanation = '';
+            if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
+              const solEl = children[i + 1];
+              const paragraphs = solEl.querySelectorAll('p');
+              const texts = [];
+              paragraphs.forEach((p, idx) => {
+                if (idx === 0 && p.textContent.trim() === 'Explanation') return;
+                texts.push(p.textContent.trim());
+              });
+              explanation = texts.join('\n');
+              i++;
+            }
+
+            blocks.push({
+              type: 'question',
+              questionType: 'multiplechoice',
+              label,
+              choices,
+              shuffle,
+              explanation
+            });
+          }
+        }
+
+        problemData.introHtml = introHtml;
+        problemData.blocks = blocks;
+
+        if (currentMode === 'visual') {
+          renderWysiwygEditor();
+        }
+      } catch (e) {
+        console.error('Parse error:', e);
+      }
+    }
+
+    // Render WYSIWYG editor
+    function renderWysiwygEditor() {
+      const container = document.getElementById('wysiwygEditor');
+
+      let html = `
+        <div class="wysiwyg-section">
+          <div class="wysiwyg-section-header">
+            <span class="wysiwyg-section-title">Problem Settings</span>
+          </div>
+          <div class="wysiwyg-field">
+            <label class="wysiwyg-field-label">Problem Title</label>
+            <input type="text" class="wysiwyg-input" value="${escapeAttr(problemData.displayName)}"
+                   onchange="problemData.displayName = this.value; renderPreview();">
+          </div>
+          <div class="wysiwyg-field">
+            <label class="wysiwyg-field-label">Max Attempts</label>
+            <input type="number" class="wysiwyg-input" value="${problemData.maxAttempts}" style="width: 100px;"
+                   onchange="problemData.maxAttempts = this.value; renderPreview();">
+          </div>
+        </div>
+
+        <div class="wysiwyg-section">
+          <div class="wysiwyg-section-header">
+            <span class="wysiwyg-section-title">Introduction</span>
+          </div>
+          <div class="rich-text-toolbar">
+            <button onclick="execCommand('bold')" title="Bold"><b>B</b></button>
+            <button onclick="execCommand('italic')" title="Italic"><i>I</i></button>
+            <button onclick="execCommand('underline')" title="Underline"><u>U</u></button>
+            <button onclick="execCommand('insertUnorderedList')" title="Bullet List">• List</button>
+            <button onclick="execCommand('insertOrderedList')" title="Numbered List">1. List</button>
+          </div>
+          <div class="rich-text-area" contenteditable="true" id="introEditor"
+               oninput="problemData.introHtml = this.innerHTML; renderPreview();">${problemData.introHtml}</div>
+        </div>
+
+        <div class="wysiwyg-section">
+          <div class="wysiwyg-section-header">
+            <span class="wysiwyg-section-title">Questions</span>
+          </div>
+      `;
+
+      let qNum = 0;
+      problemData.blocks.forEach((block, blockIdx) => {
+        if (block.type === 'html') {
+          html += `
+            <div class="wysiwyg-question" style="background: #fff3e0;">
+              <div class="wysiwyg-question-header" style="background: #ffe0b2;">
+                <span class="wysiwyg-question-number" style="color: #e65100;">HTML Block</span>
+                <div class="wysiwyg-question-actions">
+                  <button class="btn btn-sm btn-danger" onclick="deleteBlock(${blockIdx})">Delete</button>
+                </div>
+              </div>
+              <div class="wysiwyg-question-body">
+                <textarea class="wysiwyg-textarea"
+                          onchange="problemData.blocks[${blockIdx}].content = this.value; renderPreview();">${escapeHtml(block.content)}</textarea>
+              </div>
+            </div>
+          `;
+        } else if (block.type === 'question') {
+          qNum++;
+          html += `
+            <div class="wysiwyg-question">
+              <div class="wysiwyg-question-header">
+                <span class="wysiwyg-question-number">Question ${qNum}</span>
+                <div class="wysiwyg-question-actions">
+                  ${blockIdx > 0 ? `<button class="btn btn-sm btn-secondary" onclick="moveBlock(${blockIdx}, -1)">↑</button>` : ''}
+                  ${blockIdx < problemData.blocks.length - 1 ? `<button class="btn btn-sm btn-secondary" onclick="moveBlock(${blockIdx}, 1)">↓</button>` : ''}
+                  <button class="btn btn-sm btn-danger" onclick="deleteBlock(${blockIdx})">Delete</button>
+                </div>
+              </div>
+              <div class="wysiwyg-question-body">
+                <div class="wysiwyg-field">
+                  <label class="wysiwyg-field-label">Question Text</label>
+                  <input type="text" class="wysiwyg-input" value="${escapeAttr(block.label)}"
+                         onchange="problemData.blocks[${blockIdx}].label = this.value; renderPreview();">
+                </div>
+
+                <div class="wysiwyg-field">
+                  <label class="wysiwyg-field-label">Answer Choices (check the correct answer)</label>
+                  <div class="wysiwyg-choices" id="choices-${blockIdx}">
+          `;
+
+          block.choices.forEach((choice, choiceIdx) => {
+            html += `
+              <div class="wysiwyg-choice ${choice.correct ? 'is-correct' : ''}">
+                <input type="checkbox" ${choice.correct ? 'checked' : ''}
+                       onchange="setCorrectChoice(${blockIdx}, ${choiceIdx}, this.checked)">
+                <input type="text" class="wysiwyg-choice-text" value="${escapeAttr(choice.text)}"
+                       onchange="problemData.blocks[${blockIdx}].choices[${choiceIdx}].text = this.value; renderPreview();">
+                <button class="wysiwyg-choice-delete" onclick="deleteChoice(${blockIdx}, ${choiceIdx})">✕</button>
+              </div>
+            `;
+          });
+
+          html += `
+                  </div>
+                  <button class="add-choice-btn" onclick="addChoice(${blockIdx})">+ Add Choice</button>
+                </div>
+
+                <div class="wysiwyg-field">
+                  <label class="wysiwyg-field-label">
+                    <input type="checkbox" ${block.shuffle ? 'checked' : ''}
+                           onchange="problemData.blocks[${blockIdx}].shuffle = this.checked; renderPreview();">
+                    Shuffle choices
+                  </label>
+                </div>
+
+                <div class="wysiwyg-field">
+                  <label class="wysiwyg-field-label">Explanation</label>
+                  <textarea class="wysiwyg-textarea" placeholder="Enter explanation for the correct answer..."
+                            onchange="problemData.blocks[${blockIdx}].explanation = this.value; renderPreview();">${escapeHtml(block.explanation || '')}</textarea>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      html += `
+          <button class="add-question-btn" onclick="addQuestion()">+ Add Question</button>
+          <button class="add-question-btn" style="background: #fff3e0; border-color: #ff9800; color: #e65100; margin-top: 8px;"
+                  onclick="addHtmlBlock()">+ Add HTML Block</button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      updateQuestionCount();
+    }
+
+    // Rich text commands
+    function execCommand(command) {
+      document.execCommand(command, false, null);
+      const introEditor = document.getElementById('introEditor');
+      if (introEditor) {
+        problemData.introHtml = introEditor.innerHTML;
+        renderPreview();
+      }
+    }
+
+    // Add question
+    function addQuestion() {
+      const qNum = problemData.blocks.filter(b => b.type === 'question').length + 1;
+      problemData.blocks.push({
+        type: 'question',
+        questionType: 'multiplechoice',
+        label: `${qNum}) New question`,
+        choices: [
+          { text: 'Option A', correct: true },
+          { text: 'Option B', correct: false },
+          { text: 'Option C', correct: false },
+          { text: 'Option D', correct: false }
+        ],
+        shuffle: false,
+        explanation: ''
+      });
+      renderWysiwygEditor();
+      renderPreview();
+    }
+
+    // Add HTML block
+    function addHtmlBlock() {
+      problemData.blocks.push({
+        type: 'html',
+        content: '<p>Additional content here...</p>'
+      });
+      renderWysiwygEditor();
+      renderPreview();
+    }
+
+    // Delete block
+    function deleteBlock(blockIdx) {
+      if (confirm('Are you sure you want to delete this?')) {
+        problemData.blocks.splice(blockIdx, 1);
+        renderWysiwygEditor();
+        renderPreview();
+      }
+    }
+
+    // Move block
+    function moveBlock(blockIdx, direction) {
+      const newIdx = blockIdx + direction;
+      if (newIdx >= 0 && newIdx < problemData.blocks.length) {
+        const temp = problemData.blocks[blockIdx];
+        problemData.blocks[blockIdx] = problemData.blocks[newIdx];
+        problemData.blocks[newIdx] = temp;
+        renderWysiwygEditor();
+        renderPreview();
+      }
+    }
+
+    // Add choice
+    function addChoice(blockIdx) {
+      problemData.blocks[blockIdx].choices.push({ text: 'New option', correct: false });
+      renderWysiwygEditor();
+      renderPreview();
+    }
+
+    // Delete choice
+    function deleteChoice(blockIdx, choiceIdx) {
+      if (problemData.blocks[blockIdx].choices.length > 2) {
+        problemData.blocks[blockIdx].choices.splice(choiceIdx, 1);
+        renderWysiwygEditor();
+        renderPreview();
+      } else {
+        alert('A question must have at least 2 choices');
+      }
+    }
+
+    // Set correct choice
+    function setCorrectChoice(blockIdx, choiceIdx, isCorrect) {
+      problemData.blocks[blockIdx].choices[choiceIdx].correct = isCorrect;
+      renderWysiwygEditor();
+      renderPreview();
+    }
+
+    // Update question count
+    function updateQuestionCount() {
+      const count = problemData.blocks.filter(b => b.type === 'question').length;
+      document.getElementById('questionCount').textContent = `${count} question${count !== 1 ? 's' : ''}`;
+    }
+
+    // Render preview
+    function renderPreview() {
+      const previewContent = document.getElementById('previewContent');
+      const showSolutions = document.getElementById('showSolutions').checked;
+
+      let html = '<div class="problem-preview">';
+      html += '<div class="problem-header">';
+      html += `<h1 class="problem-title">${escapeHtml(problemData.displayName)}</h1>`;
+      html += '</div>';
+
+      if (problemData.introHtml) {
+        html += `<div class="problem-intro">${problemData.introHtml}</div>`;
+      }
+
+      let qNum = 0;
+      problemData.blocks.forEach((block, idx) => {
+        if (block.type === 'html') {
+          html += `<div class="html-block">${block.content}</div>`;
+        } else if (block.type === 'question') {
+          qNum++;
+          html += '<div class="question-block">';
+          html += `<div class="question-label">${escapeHtml(block.label)}</div>`;
+
+          if (block.questionType === 'multiplechoice') {
+            html += '<div class="choices">';
+            block.choices.forEach((choice, cIdx) => {
+              const correctClass = showSolutions && choice.correct ? 'correct' : '';
+              html += `<label class="choice ${correctClass}">`;
+              html += `<input type="radio" name="q${idx}">`;
+              html += `<span class="choice-text">${escapeHtml(choice.text)}</span>`;
+              if (showSolutions && choice.correct) {
+                html += '<span class="correct-indicator"> ✓</span>';
+              }
+              html += '</label>';
+            });
+            html += '</div>';
+          }
+
+          if (showSolutions && block.explanation) {
+            html += '<div class="solution">';
+            html += '<div class="solution-header">Explanation</div>';
+            html += `<div class="solution-content"><p>${escapeHtml(block.explanation)}</p></div>`;
+            html += '</div>';
+          }
+
+          html += '</div>';
+        }
+      });
+
+      html += '</div>';
+      previewContent.innerHTML = html;
+      updateQuestionCount();
+
+      // Re-render MathJax
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([previewContent]).catch(err => console.warn('MathJax error:', err));
+      }
+    }
+
+    // Escape utilities
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    function escapeAttr(text) {
+      return (text || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escapeXml(text) {
+      return (text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
 
     // Panel resizer
@@ -479,7 +1173,7 @@
         const clampedWidth = Math.min(Math.max(newWidth, 20), 80);
         editorPanel.style.width = clampedWidth + '%';
         previewPanel.style.width = (100 - clampedWidth) + '%';
-        editor.refresh();
+        if (currentMode === 'xml') editor.refresh();
       });
 
       document.addEventListener('mouseup', () => {
@@ -487,241 +1181,6 @@
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
       });
-    }
-
-    // Parse problem XML
-    function parseProblem(xmlString) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlString, 'text/xml');
-
-      const parseError = doc.querySelector('parsererror');
-      if (parseError) {
-        throw new Error(parseError.textContent);
-      }
-
-      const problemEl = doc.querySelector('problem');
-      if (!problemEl) {
-        throw new Error('No <problem> element found');
-      }
-
-      const metadata = {
-        displayName: problemEl.getAttribute('display_name') || 'Untitled Problem',
-        maxAttempts: problemEl.getAttribute('max_attempts')
-      };
-
-      const blocks = [];
-      let introHtml = '';
-      const children = Array.from(problemEl.children);
-      let foundFirstQuestion = false;
-
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        const tagName = child.tagName.toLowerCase();
-
-        if (tagName === 'html') {
-          if (!foundFirstQuestion) {
-            introHtml += child.innerHTML;
-          } else {
-            blocks.push({ type: 'html', content: child.innerHTML });
-          }
-        } else if (tagName === 'multiplechoiceresponse') {
-          foundFirstQuestion = true;
-          const label = child.querySelector('label')?.textContent?.trim() || '';
-          const choicegroup = child.querySelector('choicegroup');
-          const shuffle = choicegroup?.getAttribute('shuffle') === 'true';
-
-          const choices = [];
-          child.querySelectorAll('choice').forEach(choiceEl => {
-            choices.push({
-              text: choiceEl.textContent?.trim() || '',
-              correct: choiceEl.getAttribute('correct') === 'true'
-            });
-          });
-
-          let solution = null;
-          if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
-            const solEl = children[i + 1];
-            const detailedSol = solEl.querySelector('.detailed-solution');
-            solution = detailedSol ? detailedSol.innerHTML : solEl.innerHTML;
-            i++;
-          }
-
-          blocks.push({
-            type: 'question',
-            questionType: 'multiplechoice',
-            label,
-            choices,
-            shuffle,
-            solution
-          });
-        } else if (tagName === 'numericalresponse' || tagName === 'stringresponse') {
-          foundFirstQuestion = true;
-          const label = child.querySelector('label')?.textContent?.trim() || '';
-          const answer = child.getAttribute('answer') || '';
-
-          let solution = null;
-          if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
-            const solEl = children[i + 1];
-            const detailedSol = solEl.querySelector('.detailed-solution');
-            solution = detailedSol ? detailedSol.innerHTML : solEl.innerHTML;
-            i++;
-          }
-
-          blocks.push({
-            type: 'question',
-            questionType: tagName.replace('response', ''),
-            label,
-            answer,
-            solution
-          });
-        }
-      }
-
-      return { metadata, introHtml, blocks };
-    }
-
-    // Validate problem
-    function validateProblem(parsed) {
-      const errors = [];
-      let questionIndex = 0;
-
-      for (const block of parsed.blocks) {
-        if (block.type === 'question') {
-          questionIndex++;
-
-          if (block.questionType === 'multiplechoice') {
-            const hasCorrect = block.choices.some(c => c.correct);
-            if (!hasCorrect) {
-              errors.push({ type: 'error', message: `Question ${questionIndex} has no correct answer` });
-            }
-          }
-
-          if (!block.solution) {
-            errors.push({ type: 'warning', message: `Question ${questionIndex} is missing an explanation` });
-          }
-        }
-      }
-
-      return errors;
-    }
-
-    // Render preview
-    function renderPreview() {
-      const previewContent = document.getElementById('previewContent');
-      const questionCount = document.getElementById('questionCount');
-      const validationSummary = document.getElementById('validationSummary');
-      const showSolutions = document.getElementById('showSolutions').checked;
-
-      try {
-        const xmlContent = editor.getValue();
-        const parsed = parseProblem(xmlContent);
-        const errors = validateProblem(parsed);
-
-        // Update question count
-        const numQuestions = parsed.blocks.filter(b => b.type === 'question').length;
-        questionCount.textContent = `${numQuestions} question${numQuestions !== 1 ? 's' : ''}`;
-
-        // Update validation summary
-        const numErrors = errors.filter(e => e.type === 'error').length;
-        const numWarnings = errors.filter(e => e.type === 'warning').length;
-        validationSummary.innerHTML = '';
-        if (numErrors > 0) {
-          validationSummary.innerHTML += `<span class="error-count">${numErrors} error${numErrors !== 1 ? 's' : ''}</span>`;
-        }
-        if (numWarnings > 0) {
-          validationSummary.innerHTML += `<span class="warning-count">${numWarnings} warning${numWarnings !== 1 ? 's' : ''}</span>`;
-        }
-
-        // Render preview
-        let html = '';
-
-        // Validation errors banner
-        if (errors.length > 0) {
-          html += '<div class="validation-errors">';
-          errors.forEach(err => {
-            const icon = err.type === 'error' ? '!' : '?';
-            html += `<div class="validation-item ${err.type}">${icon} ${err.message}</div>`;
-          });
-          html += '</div>';
-        }
-
-        html += '<div class="problem-preview">';
-        html += '<div class="problem-header">';
-        html += `<h1 class="problem-title">${escapeHtml(parsed.metadata.displayName)}</h1>`;
-        if (parsed.metadata.maxAttempts) {
-          html += `<div class="max-attempts">Max attempts: ${parsed.metadata.maxAttempts}</div>`;
-        }
-        html += '</div>';
-
-        if (parsed.introHtml) {
-          html += `<div class="problem-intro">${parsed.introHtml}</div>`;
-        }
-
-        let qNum = 0;
-        parsed.blocks.forEach((block, idx) => {
-          if (block.type === 'html') {
-            html += `<div class="html-block">${block.content}</div>`;
-          } else if (block.type === 'question') {
-            qNum++;
-            html += '<div class="question-block">';
-            html += `<div class="question-label">${escapeHtml(block.label)}</div>`;
-
-            if (block.questionType === 'multiplechoice') {
-              html += '<div class="choices">';
-              block.choices.forEach((choice, cIdx) => {
-                const correctClass = showSolutions && choice.correct ? 'correct' : '';
-                html += `<label class="choice ${correctClass}">`;
-                html += `<input type="radio" name="q${idx}">`;
-                html += `<span class="choice-text">${escapeHtml(choice.text)}</span>`;
-                if (showSolutions && choice.correct) {
-                  html += '<span class="correct-indicator"> ✓</span>';
-                }
-                html += '</label>';
-              });
-              html += '</div>';
-            } else {
-              html += `<input type="text" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Enter your answer">`;
-              if (showSolutions && block.answer) {
-                html += `<div style="margin-top: 8px; color: #008200;">Answer: ${escapeHtml(block.answer)}</div>`;
-              }
-            }
-
-            if (showSolutions && block.solution) {
-              html += '<div class="solution">';
-              html += '<div class="solution-header">Explanation</div>';
-              html += `<div class="solution-content">${block.solution}</div>`;
-              html += '</div>';
-            }
-
-            html += '</div>';
-          }
-        });
-
-        html += '</div>';
-        previewContent.innerHTML = html;
-
-        // Re-render MathJax
-        if (window.MathJax && window.MathJax.typesetPromise) {
-          window.MathJax.typesetPromise([previewContent]).catch(err => console.warn('MathJax error:', err));
-        }
-
-      } catch (err) {
-        questionCount.textContent = '0 questions';
-        validationSummary.innerHTML = '';
-        previewContent.innerHTML = `
-          <div class="parse-error">
-            <h3>XML Parse Error</h3>
-            <pre>${escapeHtml(err.message)}</pre>
-          </div>
-        `;
-      }
-    }
-
-    // Escape HTML
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     }
 
     // Format XML
@@ -805,22 +1264,24 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         editor.setValue(e.target.result);
+        parseXmlToData();
+        if (currentMode === 'visual') {
+          renderWysiwygEditor();
+        }
+        renderPreview();
       };
       reader.readAsText(file);
-      event.target.value = ''; // Reset for same file selection
+      event.target.value = '';
     }
 
     // Download XML
     function downloadXml() {
-      const content = editor.getValue();
-      let filename = 'problem.xml';
+      if (currentMode === 'visual') {
+        updateXmlFromData();
+      }
 
-      try {
-        const parsed = parseProblem(content);
-        if (parsed.metadata.displayName) {
-          filename = parsed.metadata.displayName.replace(/\s+/g, '_') + '.xml';
-        }
-      } catch (e) {}
+      const content = editor.getValue();
+      let filename = problemData.displayName.replace(/\s+/g, '_') + '.xml';
 
       const blob = new Blob([content], { type: 'text/xml' });
       const url = URL.createObjectURL(blob);
