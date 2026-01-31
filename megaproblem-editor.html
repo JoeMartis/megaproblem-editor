@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>edX Megaproblem Editor</title>
+
+  <!-- CodeMirror -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/xml-fold.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/fold/foldgutter.min.css">
+
+  <!-- MathJax -->
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)'], ['$', '$']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background-color: #252526;
+      border-bottom: 1px solid #3c3c3c;
+      flex-shrink: 0;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-title {
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .question-count {
+      font-size: 13px;
+      color: #a0a0a0;
+      background: #2d2d2d;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .validation-summary {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .error-count { color: #f44336; }
+    .warning-count { color: #ff9800; }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #a0a0a0;
+      cursor: pointer;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background-color: #007acc;
+      color: white;
+    }
+
+    .btn-primary:hover { background-color: #0088e0; }
+
+    .btn-secondary {
+      background-color: #2d2d2d;
+      color: #e0e0e0;
+      border: 1px solid #3c3c3c;
+    }
+
+    .btn-secondary:hover { background-color: #3d3d3d; }
+
+    /* Editor Container */
+    .editor-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-panel, .preview-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #2d2d2d;
+      border-bottom: 1px solid #3c3c3c;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #a0a0a0;
+      flex-shrink: 0;
+    }
+
+    .resize-handle {
+      width: 4px;
+      background-color: #3c3c3c;
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background-color 0.2s;
+    }
+
+    .resize-handle:hover { background-color: #007acc; }
+
+    /* CodeMirror */
+    .codemirror-wrapper {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .CodeMirror {
+      height: 100%;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Preview Panel */
+    .preview-content {
+      flex: 1;
+      overflow: auto;
+      background-color: #ffffff;
+      color: #333333;
+    }
+
+    .parse-error {
+      padding: 20px;
+      background-color: #fff3f3;
+      color: #f44336;
+    }
+
+    .parse-error h3 { margin-bottom: 10px; }
+
+    .parse-error pre {
+      background-color: #ffebee;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .validation-errors {
+      padding: 12px 20px;
+      background-color: #fff8e1;
+      border-bottom: 1px solid #ffe082;
+    }
+
+    .validation-item {
+      font-size: 13px;
+      padding: 4px 0;
+    }
+
+    .validation-item.error { color: #f44336; }
+    .validation-item.warning { color: #e65100; }
+
+    /* Problem Preview - edX Style */
+    .problem-preview {
+      padding: 24px 32px;
+      max-width: 900px;
+      margin: 0 auto;
+      font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+    }
+
+    .problem-header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #00688d;
+    }
+
+    .problem-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .max-attempts {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .problem-intro {
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+
+    .problem-intro p { margin-bottom: 12px; }
+
+    /* Question Block */
+    .question-block {
+      margin-bottom: 32px;
+      padding: 20px;
+      background-color: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+    }
+
+    .question-label {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* Choices */
+    .choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .choice {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .choice:hover {
+      border-color: #00688d;
+      background-color: #f0f7fa;
+    }
+
+    .choice.selected {
+      border-color: #00688d;
+      background-color: #e3f2fd;
+    }
+
+    .choice.correct {
+      border-color: #008200;
+      background-color: #e8f5e9;
+    }
+
+    .choice input[type="radio"] {
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .choice-text {
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .correct-indicator {
+      color: #008200;
+      font-weight: bold;
+    }
+
+    /* Solution */
+    .solution {
+      margin-top: 16px;
+      padding: 16px;
+      background-color: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      border-radius: 4px;
+    }
+
+    .solution-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #008200;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .solution-content {
+      font-size: 14px;
+      color: #2e7d32;
+    }
+
+    .solution-content p { margin-bottom: 8px; }
+    .solution-content p:last-child { margin-bottom: 0; }
+
+    /* HTML Block */
+    .html-block {
+      margin: 20px 0;
+      font-size: 15px;
+    }
+
+    .html-block p { margin-bottom: 12px; }
+
+    /* Hidden file input */
+    .hidden-input { display: none; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="toolbar">
+      <div class="toolbar-left">
+        <h1 class="app-title">edX Megaproblem Editor</h1>
+        <span class="question-count" id="questionCount">0 questions</span>
+        <div class="validation-summary" id="validationSummary"></div>
+      </div>
+      <div class="toolbar-right">
+        <label class="checkbox-label">
+          <input type="checkbox" id="showSolutions" onchange="renderPreview()">
+          Show Solutions
+        </label>
+        <button class="btn btn-secondary" onclick="formatXml()">Format XML</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Open File</button>
+        <input type="file" id="fileInput" class="hidden-input" accept=".xml" onchange="loadFile(event)">
+        <button class="btn btn-primary" onclick="downloadXml()">Download</button>
+      </div>
+    </header>
+
+    <main class="editor-container">
+      <div class="editor-panel" id="editorPanel" style="width: 50%;">
+        <div class="panel-header">XML Editor</div>
+        <div class="codemirror-wrapper">
+          <textarea id="xmlEditor"></textarea>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="resizeHandle"></div>
+
+      <div class="preview-panel" id="previewPanel" style="width: 50%;">
+        <div class="panel-header">Preview</div>
+        <div class="preview-content" id="previewContent"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Sample problem XML
+    const SAMPLE_PROBLEM = `<problem display_name="Sample Problem" max_attempts="2" markdown="null">
+  <html>
+    <p>This is an example edX megaproblem. Edit the XML on the left and see the preview on the right.</p>
+  </html>
+
+  <multiplechoiceresponse>
+    <label>1) What is 2 + 2?</label>
+    <choicegroup type="MultipleChoice" shuffle="false">
+      <choice correct="false">3</choice>
+      <choice correct="true">4</choice>
+      <choice correct="false">5</choice>
+      <choice correct="false">22</choice>
+    </choicegroup>
+  </multiplechoiceresponse>
+  <solution>
+    <div class="detailed-solution">
+      <p>Explanation</p>
+      <p>2 + 2 = 4. This is basic arithmetic.</p>
+    </div>
+  </solution>
+
+  <multiplechoiceresponse>
+    <label>2) Which planet is closest to the Sun?</label>
+    <choicegroup type="MultipleChoice" shuffle="true">
+      <choice correct="false">Venus</choice>
+      <choice correct="true">Mercury</choice>
+      <choice correct="false">Earth</choice>
+      <choice correct="false">Mars</choice>
+    </choicegroup>
+  </multiplechoiceresponse>
+  <solution>
+    <div class="detailed-solution">
+      <p>Explanation</p>
+      <p>Mercury is the closest planet to the Sun in our solar system.</p>
+    </div>
+  </solution>
+</problem>`;
+
+    // Initialize CodeMirror
+    let editor;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      editor = CodeMirror.fromTextArea(document.getElementById('xmlEditor'), {
+        mode: 'xml',
+        theme: 'monokai',
+        lineNumbers: true,
+        lineWrapping: true,
+        foldGutter: true,
+        gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+        matchTags: true,
+        autoCloseTags: true
+      });
+
+      editor.setValue(SAMPLE_PROBLEM);
+      editor.on('change', debounce(renderPreview, 300));
+
+      setupResizer();
+      renderPreview();
+    });
+
+    // Debounce function
+    function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    // Panel resizer
+    function setupResizer() {
+      const resizeHandle = document.getElementById('resizeHandle');
+      const editorPanel = document.getElementById('editorPanel');
+      const previewPanel = document.getElementById('previewPanel');
+      let isDragging = false;
+
+      resizeHandle.addEventListener('mousedown', () => {
+        isDragging = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const containerWidth = window.innerWidth;
+        const newWidth = (e.clientX / containerWidth) * 100;
+        const clampedWidth = Math.min(Math.max(newWidth, 20), 80);
+        editorPanel.style.width = clampedWidth + '%';
+        previewPanel.style.width = (100 - clampedWidth) + '%';
+        editor.refresh();
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+    }
+
+    // Parse problem XML
+    function parseProblem(xmlString) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlString, 'text/xml');
+
+      const parseError = doc.querySelector('parsererror');
+      if (parseError) {
+        throw new Error(parseError.textContent);
+      }
+
+      const problemEl = doc.querySelector('problem');
+      if (!problemEl) {
+        throw new Error('No <problem> element found');
+      }
+
+      const metadata = {
+        displayName: problemEl.getAttribute('display_name') || 'Untitled Problem',
+        maxAttempts: problemEl.getAttribute('max_attempts')
+      };
+
+      const blocks = [];
+      let introHtml = '';
+      const children = Array.from(problemEl.children);
+      let foundFirstQuestion = false;
+
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        const tagName = child.tagName.toLowerCase();
+
+        if (tagName === 'html') {
+          if (!foundFirstQuestion) {
+            introHtml += child.innerHTML;
+          } else {
+            blocks.push({ type: 'html', content: child.innerHTML });
+          }
+        } else if (tagName === 'multiplechoiceresponse') {
+          foundFirstQuestion = true;
+          const label = child.querySelector('label')?.textContent?.trim() || '';
+          const choicegroup = child.querySelector('choicegroup');
+          const shuffle = choicegroup?.getAttribute('shuffle') === 'true';
+
+          const choices = [];
+          child.querySelectorAll('choice').forEach(choiceEl => {
+            choices.push({
+              text: choiceEl.textContent?.trim() || '',
+              correct: choiceEl.getAttribute('correct') === 'true'
+            });
+          });
+
+          let solution = null;
+          if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
+            const solEl = children[i + 1];
+            const detailedSol = solEl.querySelector('.detailed-solution');
+            solution = detailedSol ? detailedSol.innerHTML : solEl.innerHTML;
+            i++;
+          }
+
+          blocks.push({
+            type: 'question',
+            questionType: 'multiplechoice',
+            label,
+            choices,
+            shuffle,
+            solution
+          });
+        } else if (tagName === 'numericalresponse' || tagName === 'stringresponse') {
+          foundFirstQuestion = true;
+          const label = child.querySelector('label')?.textContent?.trim() || '';
+          const answer = child.getAttribute('answer') || '';
+
+          let solution = null;
+          if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
+            const solEl = children[i + 1];
+            const detailedSol = solEl.querySelector('.detailed-solution');
+            solution = detailedSol ? detailedSol.innerHTML : solEl.innerHTML;
+            i++;
+          }
+
+          blocks.push({
+            type: 'question',
+            questionType: tagName.replace('response', ''),
+            label,
+            answer,
+            solution
+          });
+        }
+      }
+
+      return { metadata, introHtml, blocks };
+    }
+
+    // Validate problem
+    function validateProblem(parsed) {
+      const errors = [];
+      let questionIndex = 0;
+
+      for (const block of parsed.blocks) {
+        if (block.type === 'question') {
+          questionIndex++;
+
+          if (block.questionType === 'multiplechoice') {
+            const hasCorrect = block.choices.some(c => c.correct);
+            if (!hasCorrect) {
+              errors.push({ type: 'error', message: `Question ${questionIndex} has no correct answer` });
+            }
+          }
+
+          if (!block.solution) {
+            errors.push({ type: 'warning', message: `Question ${questionIndex} is missing an explanation` });
+          }
+        }
+      }
+
+      return errors;
+    }
+
+    // Render preview
+    function renderPreview() {
+      const previewContent = document.getElementById('previewContent');
+      const questionCount = document.getElementById('questionCount');
+      const validationSummary = document.getElementById('validationSummary');
+      const showSolutions = document.getElementById('showSolutions').checked;
+
+      try {
+        const xmlContent = editor.getValue();
+        const parsed = parseProblem(xmlContent);
+        const errors = validateProblem(parsed);
+
+        // Update question count
+        const numQuestions = parsed.blocks.filter(b => b.type === 'question').length;
+        questionCount.textContent = `${numQuestions} question${numQuestions !== 1 ? 's' : ''}`;
+
+        // Update validation summary
+        const numErrors = errors.filter(e => e.type === 'error').length;
+        const numWarnings = errors.filter(e => e.type === 'warning').length;
+        validationSummary.innerHTML = '';
+        if (numErrors > 0) {
+          validationSummary.innerHTML += `<span class="error-count">${numErrors} error${numErrors !== 1 ? 's' : ''}</span>`;
+        }
+        if (numWarnings > 0) {
+          validationSummary.innerHTML += `<span class="warning-count">${numWarnings} warning${numWarnings !== 1 ? 's' : ''}</span>`;
+        }
+
+        // Render preview
+        let html = '';
+
+        // Validation errors banner
+        if (errors.length > 0) {
+          html += '<div class="validation-errors">';
+          errors.forEach(err => {
+            const icon = err.type === 'error' ? '!' : '?';
+            html += `<div class="validation-item ${err.type}">${icon} ${err.message}</div>`;
+          });
+          html += '</div>';
+        }
+
+        html += '<div class="problem-preview">';
+        html += '<div class="problem-header">';
+        html += `<h1 class="problem-title">${escapeHtml(parsed.metadata.displayName)}</h1>`;
+        if (parsed.metadata.maxAttempts) {
+          html += `<div class="max-attempts">Max attempts: ${parsed.metadata.maxAttempts}</div>`;
+        }
+        html += '</div>';
+
+        if (parsed.introHtml) {
+          html += `<div class="problem-intro">${parsed.introHtml}</div>`;
+        }
+
+        let qNum = 0;
+        parsed.blocks.forEach((block, idx) => {
+          if (block.type === 'html') {
+            html += `<div class="html-block">${block.content}</div>`;
+          } else if (block.type === 'question') {
+            qNum++;
+            html += '<div class="question-block">';
+            html += `<div class="question-label">${escapeHtml(block.label)}</div>`;
+
+            if (block.questionType === 'multiplechoice') {
+              html += '<div class="choices">';
+              block.choices.forEach((choice, cIdx) => {
+                const correctClass = showSolutions && choice.correct ? 'correct' : '';
+                html += `<label class="choice ${correctClass}">`;
+                html += `<input type="radio" name="q${idx}">`;
+                html += `<span class="choice-text">${escapeHtml(choice.text)}</span>`;
+                if (showSolutions && choice.correct) {
+                  html += '<span class="correct-indicator"> ✓</span>';
+                }
+                html += '</label>';
+              });
+              html += '</div>';
+            } else {
+              html += `<input type="text" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Enter your answer">`;
+              if (showSolutions && block.answer) {
+                html += `<div style="margin-top: 8px; color: #008200;">Answer: ${escapeHtml(block.answer)}</div>`;
+              }
+            }
+
+            if (showSolutions && block.solution) {
+              html += '<div class="solution">';
+              html += '<div class="solution-header">Explanation</div>';
+              html += `<div class="solution-content">${block.solution}</div>`;
+              html += '</div>';
+            }
+
+            html += '</div>';
+          }
+        });
+
+        html += '</div>';
+        previewContent.innerHTML = html;
+
+        // Re-render MathJax
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([previewContent]).catch(err => console.warn('MathJax error:', err));
+        }
+
+      } catch (err) {
+        questionCount.textContent = '0 questions';
+        validationSummary.innerHTML = '';
+        previewContent.innerHTML = `
+          <div class="parse-error">
+            <h3>XML Parse Error</h3>
+            <pre>${escapeHtml(err.message)}</pre>
+          </div>
+        `;
+      }
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Format XML
+    function formatXml() {
+      try {
+        const xml = editor.getValue();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, 'text/xml');
+
+        if (doc.querySelector('parsererror')) {
+          alert('Cannot format: XML has syntax errors');
+          return;
+        }
+
+        const formatted = formatNode(doc.documentElement, 0);
+        editor.setValue(formatted);
+      } catch (err) {
+        alert('Error formatting XML: ' + err.message);
+      }
+    }
+
+    function formatNode(node, indent) {
+      const PADDING = '  ';
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent.trim();
+        return text || '';
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+      const tagName = node.tagName;
+      let attrs = '';
+      for (const attr of Array.from(node.attributes)) {
+        attrs += ` ${attr.name}="${attr.value}"`;
+      }
+
+      const hasOnlyText = node.childNodes.length === 1 && node.childNodes[0].nodeType === Node.TEXT_NODE;
+      const hasNoChildren = node.childNodes.length === 0;
+      const inlineElements = ['choice', 'label', 'p', 'span', 'a', 'strong', 'em', 'code'];
+      const isInline = inlineElements.includes(tagName.toLowerCase()) || hasOnlyText;
+
+      if (hasNoChildren) {
+        return PADDING.repeat(indent) + `<${tagName}${attrs}></${tagName}>`;
+      }
+
+      if (isInline && hasOnlyText) {
+        const text = node.textContent.trim();
+        return PADDING.repeat(indent) + `<${tagName}${attrs}>${text}</${tagName}>`;
+      }
+
+      let result = PADDING.repeat(indent) + `<${tagName}${attrs}>`;
+      let childContent = '';
+      let hasElementChildren = false;
+
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === Node.ELEMENT_NODE) {
+          hasElementChildren = true;
+        }
+        const formatted = formatNode(child, indent + 1);
+        if (formatted) {
+          childContent += '\n' + formatted;
+        }
+      }
+
+      if (hasElementChildren) {
+        result += childContent + '\n' + PADDING.repeat(indent) + `</${tagName}>`;
+      } else {
+        const text = node.textContent.trim();
+        result += text + `</${tagName}>`;
+      }
+
+      return result;
+    }
+
+    // Load file
+    function loadFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        editor.setValue(e.target.result);
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset for same file selection
+    }
+
+    // Download XML
+    function downloadXml() {
+      const content = editor.getValue();
+      let filename = 'problem.xml';
+
+      try {
+        const parsed = parseProblem(content);
+        if (parsed.metadata.displayName) {
+          filename = parsed.metadata.displayName.replace(/\s+/g, '_') + '.xml';
+        }
+      } catch (e) {}
+
+      const blob = new Blob([content], { type: 'text/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
