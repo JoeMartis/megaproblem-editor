@@ -672,6 +672,109 @@
       gap: 8px;
       margin-bottom: 4px;
     }
+
+    /* Modal dialog styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-dialog {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      min-width: 400px;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .modal-field {
+      margin-bottom: 16px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .modal-field input, .modal-field select {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .modal-field input:focus {
+      outline: none;
+      border-color: #007acc;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* Toolbar separator */
+    .toolbar-separator {
+      width: 1px;
+      height: 16px;
+      background: #ccc;
+      margin: 0 4px;
+    }
+
+    /* Code styling in preview */
+    .problem-preview code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 0.9em;
+      color: #d63384;
+    }
+
+    .problem-preview pre {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+
+    .problem-preview pre code {
+      background: none;
+      padding: 0;
+      color: #333;
+    }
+
+    /* LaTeX highlight in editor */
+    .latex-inline {
+      background: #fff3cd;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 <body>
@@ -986,8 +1089,14 @@
             <button onclick="execCommand('bold')" title="Bold"><b>B</b></button>
             <button onclick="execCommand('italic')" title="Italic"><i>I</i></button>
             <button onclick="execCommand('underline')" title="Underline"><u>U</u></button>
+            <button onclick="insertCode('introEditor')" title="Code">&lt;/&gt;</button>
+            <span class="toolbar-separator"></span>
             <button onclick="execCommand('insertUnorderedList')" title="Bullet List">• List</button>
             <button onclick="execCommand('insertOrderedList')" title="Numbered List">1. List</button>
+            <span class="toolbar-separator"></span>
+            <button onclick="showLatexDialog('introEditor')" title="Insert LaTeX">∑ LaTeX</button>
+            <button onclick="showImageDialog('introEditor')" title="Insert Image">🖼 Image</button>
+            <button onclick="showLinkDialog('introEditor')" title="Insert Link">🔗 Link</button>
           </div>
           <div class="rich-text-area" contenteditable="true" id="introEditor"
                oninput="problemData.introHtml = this.innerHTML; renderPreview();">${problemData.introHtml}</div>
@@ -1035,6 +1144,11 @@
                     <button onclick="execCommandOn('label-${blockIdx}', 'bold')" title="Bold"><b>B</b></button>
                     <button onclick="execCommandOn('label-${blockIdx}', 'italic')" title="Italic"><i>I</i></button>
                     <button onclick="execCommandOn('label-${blockIdx}', 'underline')" title="Underline"><u>U</u></button>
+                    <button onclick="insertCode('label-${blockIdx}')" title="Code">&lt;/&gt;</button>
+                    <span class="toolbar-separator"></span>
+                    <button onclick="showLatexDialog('label-${blockIdx}')" title="LaTeX">∑</button>
+                    <button onclick="showImageDialog('label-${blockIdx}')" title="Image">🖼</button>
+                    <button onclick="showLinkDialog('label-${blockIdx}')" title="Link">🔗</button>
                   </div>
                   <div class="rich-text-area label-editor" contenteditable="true" id="label-${blockIdx}"
                        oninput="problemData.blocks[${blockIdx}].label = this.innerHTML; renderPreview();"
@@ -1060,6 +1174,8 @@
                     <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'bold')" title="Bold"><b>B</b></button>
                     <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'italic')" title="Italic"><i>I</i></button>
                     <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'underline')" title="Underline"><u>U</u></button>
+                    <button onclick="insertCode('choice-${blockIdx}-${choiceIdx}')" title="Code">&lt;/&gt;</button>
+                    <button onclick="showLatexDialog('choice-${blockIdx}-${choiceIdx}')" title="LaTeX">∑</button>
                   </div>
                   <div class="choice-editor" contenteditable="true" id="choice-${blockIdx}-${choiceIdx}"
                        oninput="problemData.blocks[${blockIdx}].choices[${choiceIdx}].text = this.innerHTML; renderPreview();"
@@ -1088,7 +1204,13 @@
                     <button onclick="execCommandOn('explanation-${blockIdx}', 'bold')" title="Bold"><b>B</b></button>
                     <button onclick="execCommandOn('explanation-${blockIdx}', 'italic')" title="Italic"><i>I</i></button>
                     <button onclick="execCommandOn('explanation-${blockIdx}', 'underline')" title="Underline"><u>U</u></button>
+                    <button onclick="insertCode('explanation-${blockIdx}')" title="Code">&lt;/&gt;</button>
+                    <span class="toolbar-separator"></span>
                     <button onclick="execCommandOn('explanation-${blockIdx}', 'insertUnorderedList')" title="Bullet List">• List</button>
+                    <span class="toolbar-separator"></span>
+                    <button onclick="showLatexDialog('explanation-${blockIdx}')" title="Insert LaTeX">∑ LaTeX</button>
+                    <button onclick="showImageDialog('explanation-${blockIdx}')" title="Insert Image">🖼 Image</button>
+                    <button onclick="showLinkDialog('explanation-${blockIdx}')" title="Insert Link">🔗 Link</button>
                   </div>
                   <div class="rich-text-area explanation-editor" contenteditable="true" id="explanation-${blockIdx}"
                        oninput="problemData.blocks[${blockIdx}].explanation = this.innerHTML; renderPreview();"
@@ -1155,6 +1277,266 @@
           renderPreview();
           return;
         }
+      }
+    }
+
+    // Insert code formatting
+    function insertCode(elementId) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      element.focus();
+      const selection = window.getSelection();
+      const selectedText = selection.toString() || 'code';
+
+      document.execCommand('insertHTML', false, `<code>${selectedText}</code>`);
+      syncFieldToData(elementId);
+    }
+
+    // Show LaTeX dialog
+    function showLatexDialog(targetElementId) {
+      const selection = window.getSelection();
+      const selectedText = selection.toString();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-dialog">
+          <div class="modal-title">Insert LaTeX</div>
+          <div class="modal-field">
+            <label>LaTeX Expression</label>
+            <input type="text" id="latexInput" placeholder="e.g., x^2 + y^2 = z^2" value="${selectedText}">
+          </div>
+          <div class="modal-field">
+            <label>Display Mode</label>
+            <select id="latexMode">
+              <option value="inline">Inline (within text)</option>
+              <option value="block">Block (centered, separate line)</option>
+            </select>
+          </div>
+          <div class="modal-field" style="background: #f8f9fa; padding: 12px; border-radius: 4px;">
+            <label style="margin-bottom: 8px;">Preview</label>
+            <div id="latexPreview" style="font-size: 16px; min-height: 30px;"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="insertLatex('${targetElementId}')">Insert</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+      const input = document.getElementById('latexInput');
+      input.focus();
+      input.select();
+
+      // Live preview
+      const updatePreview = () => {
+        const latex = input.value;
+        const mode = document.getElementById('latexMode').value;
+        const preview = document.getElementById('latexPreview');
+        if (mode === 'inline') {
+          preview.innerHTML = `\\(${latex}\\)`;
+        } else {
+          preview.innerHTML = `\\[${latex}\\]`;
+        }
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([preview]).catch(() => {});
+        }
+      };
+
+      input.addEventListener('input', updatePreview);
+      document.getElementById('latexMode').addEventListener('change', updatePreview);
+      updatePreview();
+    }
+
+    // Insert LaTeX
+    function insertLatex(targetElementId) {
+      const latex = document.getElementById('latexInput').value;
+      const mode = document.getElementById('latexMode').value;
+      closeModal();
+
+      const element = document.getElementById(targetElementId);
+      if (!element || !latex) return;
+
+      element.focus();
+
+      let html;
+      if (mode === 'inline') {
+        html = `\\(${latex}\\)`;
+      } else {
+        html = `<div style="text-align: center; margin: 12px 0;">\\[${latex}\\]</div>`;
+      }
+
+      document.execCommand('insertHTML', false, html);
+      syncFieldToData(targetElementId);
+
+      // Re-render MathJax
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([element]).catch(() => {});
+      }
+    }
+
+    // Show Image dialog
+    function showImageDialog(targetElementId) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-dialog">
+          <div class="modal-title">Insert Image</div>
+          <div class="modal-field">
+            <label>Image URL</label>
+            <input type="text" id="imageUrl" placeholder="https://example.com/image.png">
+          </div>
+          <div class="modal-field">
+            <label>Alt Text (optional)</label>
+            <input type="text" id="imageAlt" placeholder="Description of the image">
+          </div>
+          <div class="modal-field">
+            <label>Width (optional)</label>
+            <input type="text" id="imageWidth" placeholder="e.g., 300px or 50%">
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="insertImage('${targetElementId}')">Insert</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+      document.getElementById('imageUrl').focus();
+    }
+
+    // Insert Image
+    function insertImage(targetElementId) {
+      const url = document.getElementById('imageUrl').value;
+      const alt = document.getElementById('imageAlt').value || '';
+      const width = document.getElementById('imageWidth').value;
+      closeModal();
+
+      if (!url) return;
+
+      const element = document.getElementById(targetElementId);
+      if (!element) return;
+
+      element.focus();
+
+      let style = '';
+      if (width) {
+        style = ` style="width: ${width}; max-width: 100%;"`;
+      } else {
+        style = ' style="max-width: 100%;"';
+      }
+
+      const html = `<img src="${url}" alt="${alt}"${style}>`;
+      document.execCommand('insertHTML', false, html);
+      syncFieldToData(targetElementId);
+    }
+
+    // Show Link dialog
+    function showLinkDialog(targetElementId) {
+      const selection = window.getSelection();
+      const selectedText = selection.toString();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-dialog">
+          <div class="modal-title">Insert Link</div>
+          <div class="modal-field">
+            <label>URL</label>
+            <input type="text" id="linkUrl" placeholder="https://example.com">
+          </div>
+          <div class="modal-field">
+            <label>Link Text</label>
+            <input type="text" id="linkText" placeholder="Click here" value="${selectedText}">
+          </div>
+          <div class="modal-field">
+            <label>
+              <input type="checkbox" id="linkNewTab" checked> Open in new tab
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="insertLink('${targetElementId}')">Insert</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+      document.getElementById('linkUrl').focus();
+    }
+
+    // Insert Link
+    function insertLink(targetElementId) {
+      const url = document.getElementById('linkUrl').value;
+      const text = document.getElementById('linkText').value || url;
+      const newTab = document.getElementById('linkNewTab').checked;
+      closeModal();
+
+      if (!url) return;
+
+      const element = document.getElementById(targetElementId);
+      if (!element) return;
+
+      element.focus();
+
+      const target = newTab ? ' target="_blank" rel="noopener noreferrer"' : '';
+      const html = `<a href="${url}"${target}>${text}</a>`;
+      document.execCommand('insertHTML', false, html);
+      syncFieldToData(targetElementId);
+    }
+
+    // Close modal
+    function closeModal() {
+      const overlay = document.querySelector('.modal-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    // Sync field content to problemData
+    function syncFieldToData(elementId) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+
+      // Handle intro editor
+      if (elementId === 'introEditor') {
+        problemData.introHtml = element.innerHTML;
+        renderPreview();
+        return;
+      }
+
+      // Handle explanation fields
+      let match = elementId.match(/explanation-(\d+)/);
+      if (match) {
+        const blockIdx = parseInt(match[1]);
+        problemData.blocks[blockIdx].explanation = element.innerHTML;
+        renderPreview();
+        return;
+      }
+
+      // Handle label fields
+      match = elementId.match(/label-(\d+)/);
+      if (match) {
+        const blockIdx = parseInt(match[1]);
+        problemData.blocks[blockIdx].label = element.innerHTML;
+        renderPreview();
+        return;
+      }
+
+      // Handle choice fields
+      match = elementId.match(/choice-(\d+)-(\d+)/);
+      if (match) {
+        const blockIdx = parseInt(match[1]);
+        const choiceIdx = parseInt(match[2]);
+        problemData.blocks[blockIdx].choices[choiceIdx].text = element.innerHTML;
+        renderPreview();
+        return;
       }
     }
 
