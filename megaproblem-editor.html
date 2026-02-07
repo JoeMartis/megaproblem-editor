@@ -602,6 +602,76 @@
     .explanation-editor {
       min-height: 80px;
     }
+
+    /* Label rich text editor */
+    .label-editor {
+      min-height: 40px;
+      padding: 8px 12px;
+    }
+
+    /* Compact toolbar for inline elements */
+    .rich-text-toolbar-compact {
+      display: flex;
+      gap: 2px;
+      padding: 4px 6px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+    }
+
+    .rich-text-toolbar-compact button {
+      padding: 2px 6px;
+      font-size: 11px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .rich-text-toolbar-compact button:hover {
+      background: #e0e0e0;
+    }
+
+    /* Choice rich text editor */
+    .wysiwyg-choice-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .choice-editor {
+      min-height: 24px;
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 0 0 4px 4px;
+      font-size: 14px;
+      line-height: 1.4;
+      background: white;
+    }
+
+    .choice-editor:focus {
+      outline: none;
+      border-color: #007acc;
+    }
+
+    .choice-editor:empty:before {
+      content: attr(data-placeholder);
+      color: #999;
+      font-style: italic;
+    }
+
+    .wysiwyg-choice-expanded {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .wysiwyg-choice-expanded .choice-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -769,10 +839,10 @@
         } else if (block.type === 'question') {
           if (block.questionType === 'multiplechoice') {
             xml += `  <multiplechoiceresponse>\n`;
-            xml += `    <label>${escapeXml(block.label)}</label>\n`;
+            xml += `    <label>${block.label}</label>\n`;
             xml += `    <choicegroup type="MultipleChoice" shuffle="${block.shuffle}">\n`;
             block.choices.forEach(choice => {
-              xml += `      <choice correct="${choice.correct}">${escapeXml(choice.text)}</choice>\n`;
+              xml += `      <choice correct="${choice.correct}">${choice.text}</choice>\n`;
             });
             xml += `    </choicegroup>\n`;
             xml += `  </multiplechoiceresponse>\n`;
@@ -782,7 +852,7 @@
             xml += `  <solution>\n`;
             xml += `    <div class="detailed-solution">\n`;
             xml += `      <p>Explanation</p>\n`;
-            xml += `      <p>${escapeXml(block.explanation)}</p>\n`;
+            xml += `      ${block.explanation}\n`;
             xml += `    </div>\n`;
             xml += `  </solution>\n`;
           }
@@ -832,14 +902,15 @@
             }
           } else if (tagName === 'multiplechoiceresponse') {
             foundFirstQuestion = true;
-            const label = child.querySelector('label')?.textContent?.trim() || '';
+            const labelEl = child.querySelector('label');
+            const label = labelEl ? labelEl.innerHTML.trim() : '';
             const choicegroup = child.querySelector('choicegroup');
             const shuffle = choicegroup?.getAttribute('shuffle') === 'true';
 
             const choices = [];
             child.querySelectorAll('choice').forEach(choiceEl => {
               choices.push({
-                text: choiceEl.textContent?.trim() || '',
+                text: choiceEl.innerHTML.trim() || '',
                 correct: choiceEl.getAttribute('correct') === 'true'
               });
             });
@@ -847,13 +918,20 @@
             let explanation = '';
             if (i + 1 < children.length && children[i + 1].tagName.toLowerCase() === 'solution') {
               const solEl = children[i + 1];
-              const paragraphs = solEl.querySelectorAll('p');
-              const texts = [];
-              paragraphs.forEach((p, idx) => {
-                if (idx === 0 && p.textContent.trim() === 'Explanation') return;
-                texts.push(p.textContent.trim());
-              });
-              explanation = texts.join('\n');
+              const detailedSolution = solEl.querySelector('.detailed-solution');
+              if (detailedSolution) {
+                // Get all content except the first "Explanation" header
+                const allElements = Array.from(detailedSolution.children);
+                const contentElements = allElements.filter((el, idx) => {
+                  if (idx === 0 && el.tagName.toLowerCase() === 'p' && el.textContent.trim() === 'Explanation') {
+                    return false;
+                  }
+                  return true;
+                });
+                explanation = contentElements.map(el => el.outerHTML).join('');
+              } else {
+                explanation = solEl.innerHTML.trim();
+              }
               i++;
             }
 
@@ -953,8 +1031,14 @@
               <div class="wysiwyg-question-body">
                 <div class="wysiwyg-field">
                   <label class="wysiwyg-field-label">Question Text</label>
-                  <input type="text" class="wysiwyg-input" value="${escapeAttr(block.label)}"
-                         onchange="problemData.blocks[${blockIdx}].label = this.value; renderPreview();">
+                  <div class="rich-text-toolbar-compact">
+                    <button onclick="execCommandOn('label-${blockIdx}', 'bold')" title="Bold"><b>B</b></button>
+                    <button onclick="execCommandOn('label-${blockIdx}', 'italic')" title="Italic"><i>I</i></button>
+                    <button onclick="execCommandOn('label-${blockIdx}', 'underline')" title="Underline"><u>U</u></button>
+                  </div>
+                  <div class="rich-text-area label-editor" contenteditable="true" id="label-${blockIdx}"
+                       oninput="problemData.blocks[${blockIdx}].label = this.innerHTML; renderPreview();"
+                       data-placeholder="Enter question text...">${block.label || ''}</div>
                 </div>
 
                 <div class="wysiwyg-field">
@@ -964,12 +1048,23 @@
 
           block.choices.forEach((choice, choiceIdx) => {
             html += `
-              <div class="wysiwyg-choice ${choice.correct ? 'is-correct' : ''}">
-                <input type="checkbox" ${choice.correct ? 'checked' : ''}
-                       onchange="setCorrectChoice(${blockIdx}, ${choiceIdx}, this.checked)">
-                <input type="text" class="wysiwyg-choice-text" value="${escapeAttr(choice.text)}"
-                       onchange="problemData.blocks[${blockIdx}].choices[${choiceIdx}].text = this.value; renderPreview();">
-                <button class="wysiwyg-choice-delete" onclick="deleteChoice(${blockIdx}, ${choiceIdx})">✕</button>
+              <div class="wysiwyg-choice wysiwyg-choice-expanded ${choice.correct ? 'is-correct' : ''}">
+                <div class="choice-controls">
+                  <input type="checkbox" ${choice.correct ? 'checked' : ''}
+                         onchange="setCorrectChoice(${blockIdx}, ${choiceIdx}, this.checked)">
+                  <span style="font-size: 12px; color: #666;">Choice ${choiceIdx + 1}</span>
+                  <button class="wysiwyg-choice-delete" onclick="deleteChoice(${blockIdx}, ${choiceIdx})">✕</button>
+                </div>
+                <div class="wysiwyg-choice-wrapper">
+                  <div class="rich-text-toolbar-compact">
+                    <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'bold')" title="Bold"><b>B</b></button>
+                    <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'italic')" title="Italic"><i>I</i></button>
+                    <button onclick="execCommandOn('choice-${blockIdx}-${choiceIdx}', 'underline')" title="Underline"><u>U</u></button>
+                  </div>
+                  <div class="choice-editor" contenteditable="true" id="choice-${blockIdx}-${choiceIdx}"
+                       oninput="problemData.blocks[${blockIdx}].choices[${choiceIdx}].text = this.innerHTML; renderPreview();"
+                       data-placeholder="Enter choice text...">${choice.text || ''}</div>
+                </div>
               </div>
             `;
           });
@@ -1032,12 +1127,33 @@
       if (element) {
         element.focus();
         document.execCommand(command, false, null);
-        // Find the block index from the element id
-        const match = elementId.match(/explanation-(\d+)/);
+
+        // Handle explanation fields
+        let match = elementId.match(/explanation-(\d+)/);
         if (match) {
           const blockIdx = parseInt(match[1]);
           problemData.blocks[blockIdx].explanation = element.innerHTML;
           renderPreview();
+          return;
+        }
+
+        // Handle label fields
+        match = elementId.match(/label-(\d+)/);
+        if (match) {
+          const blockIdx = parseInt(match[1]);
+          problemData.blocks[blockIdx].label = element.innerHTML;
+          renderPreview();
+          return;
+        }
+
+        // Handle choice fields
+        match = elementId.match(/choice-(\d+)-(\d+)/);
+        if (match) {
+          const blockIdx = parseInt(match[1]);
+          const choiceIdx = parseInt(match[2]);
+          problemData.blocks[blockIdx].choices[choiceIdx].text = element.innerHTML;
+          renderPreview();
+          return;
         }
       }
     }
@@ -1152,7 +1268,7 @@
         } else if (block.type === 'question') {
           qNum++;
           html += '<div class="question-block">';
-          html += `<div class="question-label">${escapeHtml(block.label)}</div>`;
+          html += `<div class="question-label">${block.label}</div>`;
 
           if (block.questionType === 'multiplechoice') {
             html += '<div class="choices">';
@@ -1160,7 +1276,7 @@
               const correctClass = showSolutions && choice.correct ? 'correct' : '';
               html += `<label class="choice ${correctClass}">`;
               html += `<input type="radio" name="q${idx}">`;
-              html += `<span class="choice-text">${escapeHtml(choice.text)}</span>`;
+              html += `<span class="choice-text">${choice.text}</span>`;
               if (showSolutions && choice.correct) {
                 html += '<span class="correct-indicator"> ✓</span>';
               }
