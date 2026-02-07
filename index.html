@@ -425,6 +425,17 @@
       border-radius: 8px;
       margin-bottom: 16px;
       overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    }
+
+    .wysiwyg-question.dragging {
+      opacity: 0.5;
+      transform: scale(0.98);
+    }
+
+    .wysiwyg-question.drag-over {
+      border-color: #007acc;
+      box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.3);
     }
 
     .wysiwyg-question-header {
@@ -436,6 +447,30 @@
       border-bottom: 1px solid #ddd;
     }
 
+    .wysiwyg-question-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .drag-handle {
+      cursor: grab;
+      padding: 4px 6px;
+      color: #999;
+      font-size: 14px;
+      user-select: none;
+      border-radius: 4px;
+    }
+
+    .drag-handle:hover {
+      background: #e0e0e0;
+      color: #666;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
     .wysiwyg-question-number {
       font-weight: 600;
       color: #00688d;
@@ -444,6 +479,18 @@
     .wysiwyg-question-actions {
       display: flex;
       gap: 4px;
+    }
+
+    .drop-indicator {
+      height: 4px;
+      background: #007acc;
+      border-radius: 2px;
+      margin: -2px 0 14px 0;
+      display: none;
+    }
+
+    .drop-indicator.visible {
+      display: block;
     }
 
     .wysiwyg-question-body {
@@ -1110,30 +1157,63 @@
 
       let qNum = 0;
       problemData.blocks.forEach((block, blockIdx) => {
+        html += `<div class="drop-indicator" data-drop-index="${blockIdx}"></div>`;
+
         if (block.type === 'html') {
           html += `
-            <div class="wysiwyg-question" style="background: #fff3e0;">
+            <div class="wysiwyg-question" style="background: #fff3e0;" draggable="true" data-block-idx="${blockIdx}"
+                 ondragstart="handleDragStart(event, ${blockIdx})"
+                 ondragend="handleDragEnd(event)"
+                 ondragover="handleDragOver(event, ${blockIdx})"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event, ${blockIdx})">
               <div class="wysiwyg-question-header" style="background: #ffe0b2;">
-                <span class="wysiwyg-question-number" style="color: #e65100;">HTML Block</span>
+                <div class="wysiwyg-question-left">
+                  <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+                  <span class="wysiwyg-question-number" style="color: #e65100;">HTML Block</span>
+                </div>
                 <div class="wysiwyg-question-actions">
                   <button class="btn btn-sm btn-danger" onclick="deleteBlock(${blockIdx})">Delete</button>
                 </div>
               </div>
               <div class="wysiwyg-question-body">
-                <textarea class="wysiwyg-textarea"
-                          onchange="problemData.blocks[${blockIdx}].content = this.value; renderPreview();">${escapeHtml(block.content)}</textarea>
+                <div class="wysiwyg-field">
+                  <label class="wysiwyg-field-label">HTML Content</label>
+                  <div class="rich-text-toolbar">
+                    <button onclick="execCommandOn('htmlblock-${blockIdx}', 'bold')" title="Bold"><b>B</b></button>
+                    <button onclick="execCommandOn('htmlblock-${blockIdx}', 'italic')" title="Italic"><i>I</i></button>
+                    <button onclick="execCommandOn('htmlblock-${blockIdx}', 'underline')" title="Underline"><u>U</u></button>
+                    <button onclick="insertCode('htmlblock-${blockIdx}')" title="Code">&lt;/&gt;</button>
+                    <span class="toolbar-separator"></span>
+                    <button onclick="execCommandOn('htmlblock-${blockIdx}', 'insertUnorderedList')" title="Bullet List">• List</button>
+                    <button onclick="execCommandOn('htmlblock-${blockIdx}', 'insertOrderedList')" title="Numbered List">1. List</button>
+                    <span class="toolbar-separator"></span>
+                    <button onclick="showLatexDialog('htmlblock-${blockIdx}')" title="Insert LaTeX">∑ LaTeX</button>
+                    <button onclick="showImageDialog('htmlblock-${blockIdx}')" title="Insert Image">🖼 Image</button>
+                    <button onclick="showLinkDialog('htmlblock-${blockIdx}')" title="Insert Link">🔗 Link</button>
+                  </div>
+                  <div class="rich-text-area" contenteditable="true" id="htmlblock-${blockIdx}"
+                       oninput="problemData.blocks[${blockIdx}].content = this.innerHTML; renderPreview();"
+                       data-placeholder="Enter HTML content...">${block.content || ''}</div>
+                </div>
               </div>
             </div>
           `;
         } else if (block.type === 'question') {
           qNum++;
           html += `
-            <div class="wysiwyg-question">
+            <div class="wysiwyg-question" draggable="true" data-block-idx="${blockIdx}"
+                 ondragstart="handleDragStart(event, ${blockIdx})"
+                 ondragend="handleDragEnd(event)"
+                 ondragover="handleDragOver(event, ${blockIdx})"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event, ${blockIdx})">
               <div class="wysiwyg-question-header">
-                <span class="wysiwyg-question-number">Question ${qNum}</span>
+                <div class="wysiwyg-question-left">
+                  <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+                  <span class="wysiwyg-question-number">Question ${qNum}</span>
+                </div>
                 <div class="wysiwyg-question-actions">
-                  ${blockIdx > 0 ? `<button class="btn btn-sm btn-secondary" onclick="moveBlock(${blockIdx}, -1)">↑</button>` : ''}
-                  ${blockIdx < problemData.blocks.length - 1 ? `<button class="btn btn-sm btn-secondary" onclick="moveBlock(${blockIdx}, 1)">↓</button>` : ''}
                   <button class="btn btn-sm btn-danger" onclick="deleteBlock(${blockIdx})">Delete</button>
                 </div>
               </div>
@@ -1222,6 +1302,9 @@
         }
       });
 
+      // Final drop indicator for adding to the end
+      html += `<div class="drop-indicator" data-drop-index="${problemData.blocks.length}"></div>`;
+
       html += `
           <button class="add-question-btn" onclick="addQuestion()">+ Add Question</button>
           <button class="add-question-btn" style="background: #fff3e0; border-color: #ff9800; color: #e65100; margin-top: 8px;"
@@ -1231,6 +1314,84 @@
 
       container.innerHTML = html;
       updateQuestionCount();
+      setupBlockDragAndDrop();
+    }
+
+    // Drag and drop state
+    let draggedBlockIdx = null;
+
+    function handleDragStart(event, blockIdx) {
+      draggedBlockIdx = blockIdx;
+      event.target.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', blockIdx);
+    }
+
+    function handleDragEnd(event) {
+      event.target.classList.remove('dragging');
+      draggedBlockIdx = null;
+      // Hide all drop indicators
+      document.querySelectorAll('.drop-indicator').forEach(el => el.classList.remove('visible'));
+      document.querySelectorAll('.wysiwyg-question').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    function handleDragOver(event, blockIdx) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+
+      if (draggedBlockIdx === null || draggedBlockIdx === blockIdx) return;
+
+      // Show drop indicator
+      const dropIndicator = document.querySelector(`.drop-indicator[data-drop-index="${blockIdx}"]`);
+      if (dropIndicator) {
+        document.querySelectorAll('.drop-indicator').forEach(el => el.classList.remove('visible'));
+        dropIndicator.classList.add('visible');
+      }
+    }
+
+    function handleDragLeave(event) {
+      event.target.classList.remove('drag-over');
+    }
+
+    function handleDrop(event, targetIdx) {
+      event.preventDefault();
+      if (draggedBlockIdx === null || draggedBlockIdx === targetIdx) return;
+
+      // Move the block
+      const block = problemData.blocks.splice(draggedBlockIdx, 1)[0];
+      const insertIdx = targetIdx > draggedBlockIdx ? targetIdx - 1 : targetIdx;
+      problemData.blocks.splice(insertIdx, 0, block);
+
+      renderWysiwygEditor();
+      renderPreview();
+    }
+
+    function setupBlockDragAndDrop() {
+      // Add drop handlers to drop indicators
+      document.querySelectorAll('.drop-indicator').forEach(indicator => {
+        indicator.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          indicator.classList.add('visible');
+        });
+
+        indicator.addEventListener('dragleave', () => {
+          indicator.classList.remove('visible');
+        });
+
+        indicator.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const dropIndex = parseInt(indicator.dataset.dropIndex);
+          if (draggedBlockIdx === null || draggedBlockIdx === dropIndex) return;
+
+          const block = problemData.blocks.splice(draggedBlockIdx, 1)[0];
+          const insertIdx = dropIndex > draggedBlockIdx ? dropIndex - 1 : dropIndex;
+          problemData.blocks.splice(insertIdx, 0, block);
+
+          renderWysiwygEditor();
+          renderPreview();
+        });
+      });
     }
 
     // Rich text commands
@@ -1274,6 +1435,15 @@
           const blockIdx = parseInt(match[1]);
           const choiceIdx = parseInt(match[2]);
           problemData.blocks[blockIdx].choices[choiceIdx].text = element.innerHTML;
+          renderPreview();
+          return;
+        }
+
+        // Handle HTML block fields
+        match = elementId.match(/htmlblock-(\d+)/);
+        if (match) {
+          const blockIdx = parseInt(match[1]);
+          problemData.blocks[blockIdx].content = element.innerHTML;
           renderPreview();
           return;
         }
@@ -1535,6 +1705,15 @@
         const blockIdx = parseInt(match[1]);
         const choiceIdx = parseInt(match[2]);
         problemData.blocks[blockIdx].choices[choiceIdx].text = element.innerHTML;
+        renderPreview();
+        return;
+      }
+
+      // Handle HTML block fields
+      match = elementId.match(/htmlblock-(\d+)/);
+      if (match) {
+        const blockIdx = parseInt(match[1]);
+        problemData.blocks[blockIdx].content = element.innerHTML;
         renderPreview();
         return;
       }
