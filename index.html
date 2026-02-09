@@ -1065,27 +1065,38 @@
 
     // Mode switching
     function switchMode(mode) {
-      currentMode = mode;
-
-      document.getElementById('visualModeBtn').classList.toggle('active', mode === 'visual');
-      document.getElementById('xmlModeBtn').classList.toggle('active', mode === 'xml');
-
       const xmlWrapper = document.getElementById('xmlEditorWrapper');
       const wysiwygEditor = document.getElementById('wysiwygEditor');
       const formatBtn = document.getElementById('formatBtn');
       const panelTitle = document.getElementById('editorPanelTitle');
 
       if (mode === 'xml') {
-        // Switch to XML mode
-        updateXmlFromData();
+        // Switch to XML mode - only generate XML if editor is empty or matches current data
+        const currentXml = editor.getValue().trim();
+        if (!currentXml || currentXml === dataToXml().trim()) {
+          updateXmlFromData();
+        }
+        // Otherwise keep whatever XML is in the editor
+
+        currentMode = mode;
+        document.getElementById('visualModeBtn').classList.toggle('active', false);
+        document.getElementById('xmlModeBtn').classList.toggle('active', true);
         xmlWrapper.style.display = 'block';
         wysiwygEditor.style.display = 'none';
         formatBtn.style.display = 'block';
         panelTitle.textContent = 'XML Editor';
         editor.refresh();
       } else {
-        // Switch to Visual mode
-        parseXmlToData();
+        // Switch to Visual mode - try to parse XML first
+        const parseResult = parseXmlToData();
+        if (!parseResult.success) {
+          alert('Cannot switch to Visual mode: ' + parseResult.error + '\n\nPlease fix the XML errors first.');
+          return; // Stay in XML mode
+        }
+
+        currentMode = mode;
+        document.getElementById('visualModeBtn').classList.toggle('active', true);
+        document.getElementById('xmlModeBtn').classList.toggle('active', false);
         xmlWrapper.style.display = 'none';
         wysiwygEditor.style.display = 'block';
         formatBtn.style.display = 'none';
@@ -1139,17 +1150,27 @@
       editor.setValue(xml);
     }
 
-    // Parse XML to data
+    // Parse XML to data - returns {success: boolean, error?: string}
     function parseXmlToData() {
       try {
         const xmlString = editor.getValue();
+        if (!xmlString.trim()) {
+          return { success: false, error: 'XML editor is empty' };
+        }
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlString, 'text/xml');
 
-        if (doc.querySelector('parsererror')) return;
+        const parseError = doc.querySelector('parsererror');
+        if (parseError) {
+          const errorText = parseError.textContent.split('\n')[0] || 'Invalid XML syntax';
+          return { success: false, error: errorText };
+        }
 
         const problemEl = doc.querySelector('problem');
-        if (!problemEl) return;
+        if (!problemEl) {
+          return { success: false, error: 'No <problem> element found. edX problems must be wrapped in a <problem> tag.' };
+        }
 
         problemData.displayName = problemEl.getAttribute('display_name') || 'Untitled';
         problemData.maxAttempts = problemEl.getAttribute('max_attempts') || '2';
@@ -1221,8 +1242,11 @@
         if (currentMode === 'visual') {
           renderWysiwygEditor();
         }
+
+        return { success: true };
       } catch (e) {
         console.error('Parse error:', e);
+        return { success: false, error: e.message || 'Unknown parsing error' };
       }
     }
 
