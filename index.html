@@ -822,6 +822,124 @@
       font-family: 'Monaco', 'Menlo', monospace;
       font-size: 0.9em;
     }
+
+    /* Validation modal styles */
+    .validation-modal {
+      min-width: 500px;
+      max-width: 700px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .validation-results {
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 16px 0;
+    }
+
+    .validation-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .validation-item.error {
+      background: #ffebee;
+      border: 1px solid #ffcdd2;
+    }
+
+    .validation-item.warning {
+      background: #fff3e0;
+      border: 1px solid #ffcc80;
+    }
+
+    .validation-item.info {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+    }
+
+    .validation-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .validation-item.error .validation-icon { color: #d32f2f; }
+    .validation-item.warning .validation-icon { color: #f57c00; }
+    .validation-item.info .validation-icon { color: #1976d2; }
+
+    .validation-content {
+      flex: 1;
+    }
+
+    .validation-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .validation-item.error .validation-title { color: #c62828; }
+    .validation-item.warning .validation-title { color: #e65100; }
+    .validation-item.info .validation-title { color: #1565c0; }
+
+    .validation-description {
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .validation-location {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+      font-family: monospace;
+    }
+
+    .validation-success {
+      text-align: center;
+      padding: 24px;
+      color: #2e7d32;
+    }
+
+    .validation-success-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .validation-summary {
+      display: flex;
+      gap: 16px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .summary-count {
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .summary-count.errors {
+      background: #ffcdd2;
+      color: #c62828;
+    }
+
+    .summary-count.warnings {
+      background: #ffe0b2;
+      color: #e65100;
+    }
   </style>
 </head>
 <body>
@@ -840,6 +958,7 @@
       <div class="toolbar-right">
         <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Open File</button>
         <input type="file" id="fileInput" class="hidden-input" accept=".xml" onchange="loadFile(event)">
+        <button class="btn btn-secondary" onclick="runValidation()">Validate</button>
         <button class="btn btn-primary" onclick="downloadXml()">Download</button>
       </div>
     </header>
@@ -2045,6 +2164,210 @@
       };
       reader.readAsText(file);
       event.target.value = '';
+    }
+
+    // Validate XML for common edX issues
+    function validateXml() {
+      const issues = [];
+
+      // Check intro HTML
+      if (problemData.introHtml) {
+        checkContentForIssues(problemData.introHtml, 'Introduction', issues);
+      }
+
+      // Check each block
+      let questionNum = 0;
+      problemData.blocks.forEach((block, idx) => {
+        if (block.type === 'html') {
+          checkContentForIssues(block.content || '', `HTML Block ${idx + 1}`, issues);
+        } else if (block.type === 'question') {
+          questionNum++;
+          const qLabel = `Question ${questionNum}`;
+
+          // Check label
+          checkContentForIssues(block.label || '', `${qLabel} - Label`, issues);
+
+          // Check if there's a correct answer
+          const hasCorrect = block.choices.some(c => c.correct);
+          if (!hasCorrect) {
+            issues.push({
+              type: 'error',
+              title: 'No correct answer selected',
+              description: 'This question has no correct answer marked. edX requires exactly one correct answer.',
+              location: qLabel
+            });
+          }
+
+          // Check choices
+          block.choices.forEach((choice, cIdx) => {
+            const choiceLabel = `${qLabel} - Choice ${cIdx + 1}`;
+            checkContentForIssues(choice.text || '', choiceLabel, issues);
+
+            // Check for empty choice
+            if (!choice.text || choice.text.trim() === '' || choice.text.trim() === '<br>') {
+              issues.push({
+                type: 'warning',
+                title: 'Empty choice',
+                description: 'This choice has no text content.',
+                location: choiceLabel
+              });
+            }
+          });
+
+          // Check explanation
+          if (block.explanation) {
+            checkContentForIssues(block.explanation, `${qLabel} - Explanation`, issues);
+          }
+        }
+      });
+
+      return issues;
+    }
+
+    // Check content for common issues
+    function checkContentForIssues(html, location, issues) {
+      // Check for rendered MathJax (SVG output)
+      if (html.includes('mjx-container') || html.includes('MathJax') ||
+          (html.includes('<svg') && (html.includes('data-mml') || html.includes('mjx-')))) {
+        issues.push({
+          type: 'error',
+          title: 'Rendered MathJax detected',
+          description: 'This content contains rendered MathJax SVG output instead of LaTeX source code. edX cannot process rendered MathJax. You need to use LaTeX notation like \\\\(...\\\\) or \\\\[...\\\\] instead.',
+          location: location
+        });
+      }
+
+      // Check for standalone SVG elements that might be MathJax
+      const svgMatch = html.match(/<svg[^>]*>/g);
+      if (svgMatch && (html.includes('mathjax') || html.includes('mjx') || html.includes('data-mml'))) {
+        // Already caught above
+      }
+
+      // Check for trailing backslashes after LaTeX delimiters
+      if (/\\\)\s*\\+\s*(?![[(])/g.test(html) || /\\\]\s*\\+\s*(?![[(])/g.test(html)) {
+        issues.push({
+          type: 'warning',
+          title: 'Trailing backslash after LaTeX',
+          description: 'There appears to be a trailing backslash after a LaTeX delimiter (\\\\) or (\\\\]). This may cause rendering issues in edX.',
+          location: location
+        });
+      }
+
+      // Check for potentially unsupported HTML elements
+      const unsupportedTags = ['script', 'iframe', 'object', 'embed', 'form', 'input'];
+      unsupportedTags.forEach(tag => {
+        if (new RegExp(`<${tag}[\\s>]`, 'i').test(html)) {
+          issues.push({
+            type: 'error',
+            title: `Unsupported element: <${tag}>`,
+            description: `The <${tag}> element is not supported in edX problems and will likely be stripped or cause errors.`,
+            location: location
+          });
+        }
+      });
+
+      // Check for inline styles with JavaScript
+      if (/style\s*=\s*["'][^"']*expression\s*\(/i.test(html) ||
+          /on\w+\s*=\s*["']/i.test(html)) {
+        issues.push({
+          type: 'error',
+          title: 'JavaScript detected in HTML',
+          description: 'JavaScript event handlers or CSS expressions are not allowed in edX content.',
+          location: location
+        });
+      }
+
+      // Check for extremely long content in choice (might cause display issues)
+      if (location.includes('Choice') && html.length > 1000) {
+        issues.push({
+          type: 'info',
+          title: 'Long choice content',
+          description: 'This choice has a lot of content. Consider shortening it for better display in edX.',
+          location: location
+        });
+      }
+
+      // Check for malformed LaTeX (mismatched delimiters)
+      const inlineOpens = (html.match(/\\\(/g) || []).length;
+      const inlineCloses = (html.match(/\\\)/g) || []).length;
+      const blockOpens = (html.match(/\\\[/g) || []).length;
+      const blockCloses = (html.match(/\\\]/g) || []).length;
+
+      if (inlineOpens !== inlineCloses) {
+        issues.push({
+          type: 'warning',
+          title: 'Mismatched inline LaTeX delimiters',
+          description: `Found ${inlineOpens} opening \\\\( and ${inlineCloses} closing \\\\) delimiters. LaTeX may not render correctly.`,
+          location: location
+        });
+      }
+
+      if (blockOpens !== blockCloses) {
+        issues.push({
+          type: 'warning',
+          title: 'Mismatched block LaTeX delimiters',
+          description: `Found ${blockOpens} opening \\\\[ and ${blockCloses} closing \\\\] delimiters. LaTeX may not render correctly.`,
+          location: location
+        });
+      }
+    }
+
+    // Run validation and show results
+    function runValidation() {
+      const issues = validateXml();
+      showValidationResults(issues);
+    }
+
+    // Show validation results
+    function showValidationResults(issues) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+
+      const errors = issues.filter(i => i.type === 'error');
+      const warnings = issues.filter(i => i.type === 'warning');
+
+      let content = '';
+      if (issues.length === 0) {
+        content = `
+          <div class="validation-success">
+            <div class="validation-success-icon">✓</div>
+            <div style="font-size: 18px; font-weight: 600;">No issues found!</div>
+            <div style="color: #666; margin-top: 8px;">Your XML looks good for edX.</div>
+          </div>
+        `;
+      } else {
+        content = `
+          <div class="validation-summary">
+            ${errors.length > 0 ? `<div class="summary-item"><span class="summary-count errors">${errors.length}</span> Error${errors.length !== 1 ? 's' : ''}</div>` : ''}
+            ${warnings.length > 0 ? `<div class="summary-item"><span class="summary-count warnings">${warnings.length}</span> Warning${warnings.length !== 1 ? 's' : ''}</div>` : ''}
+          </div>
+          <div class="validation-results">
+            ${issues.map(issue => `
+              <div class="validation-item ${issue.type}">
+                <div class="validation-icon">${issue.type === 'error' ? '✕' : issue.type === 'warning' ? '⚠' : 'ℹ'}</div>
+                <div class="validation-content">
+                  <div class="validation-title">${issue.title}</div>
+                  <div class="validation-description">${issue.description}</div>
+                  <div class="validation-location">Location: ${issue.location}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      overlay.innerHTML = `
+        <div class="modal-dialog validation-modal">
+          <div class="modal-title">XML Validation Results</div>
+          ${content}
+          <div class="modal-actions">
+            <button class="btn btn-primary" onclick="closeModal()">Close</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
     }
 
     // Download XML
